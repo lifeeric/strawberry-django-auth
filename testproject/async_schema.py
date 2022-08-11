@@ -1,7 +1,7 @@
 import strawberry
 from strawberry.tools import merge_types
-from strawberry_django_jwt.middleware import AsyncJSONWebTokenMiddleware
 
+from gqlauth.extensions import GqlAuthAsyncJSONWebTokenMiddleware
 from gqlauth.user import arg_mutations, relay
 from gqlauth.user.queries import UserQueries
 
@@ -60,7 +60,7 @@ relay_schema = strawberry.Schema(
     query=Query,
     mutation=RelayMutation,
     extensions=[
-        AsyncJSONWebTokenMiddleware,
+        GqlAuthAsyncJSONWebTokenMiddleware,
     ],
 )
 
@@ -68,6 +68,6 @@ arg_schema = strawberry.Schema(
     query=Query,
     mutation=Mutation,
     extensions=[
-        AsyncJSONWebTokenMiddleware,
+        GqlAuthAsyncJSONWebTokenMiddleware,
     ],
 )

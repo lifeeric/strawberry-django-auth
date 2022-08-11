@@ -109,7 +109,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 AUTHENTICATION_BACKENDS = [
-    "gqlauth.backends.GraphQLAuthBackend",
+    "strawberry_django_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 

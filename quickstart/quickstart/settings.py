@@ -110,7 +110,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 
 AUTHENTICATION_BACKENDS = [
-    "gqlauth.backends.GraphQLAuthBackend",
+    "strawberry_django_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 

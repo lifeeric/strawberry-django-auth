@@ -447,18 +447,8 @@ pip install strawberry-django-auth
 # settings.py
 
 INSTALLED_APPS = [
-   # ...
-   "gqlauth",
-]
-
-AUTHENTICATION_BACKENDS = [
-    # remove this
-    # "strawberry_django_jwt.backends.JSONWebTokenBackend",
-
-    # add this
-    "gqlauth.backends.GraphQLAuthBackend",
-
     # ...
+    "gqlauth",
 ]
 ```
 
@@ -505,18 +495,20 @@ GQL_AUTH = GqlAuthSettings(
 
 Create a file called ``schema.py`` next to your ``settings.py`` with the following:
 
+!!! Important "Do not forget to add the extensions or no authentication will occur."
+
 ```python
 # quickstart.schema.py
 
 import strawberry
 from gqlauth.user.queries import UserQueries
-from strawberry_django_jwt.middleware import JSONWebTokenMiddleware
-
+# can be async too `AsyncJSONWebTokenMiddleware`
+from gqlauth.extensions import GqlAuthJSONWebTokenMiddleware
 
 schema = strawberry.Schema(
     query=UserQueries,
     extensions=[
-        JSONWebTokenMiddleware,
+        GqlAuthJSONWebTokenMiddleware,
     ],
 )
 
