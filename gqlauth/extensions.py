@@ -1,6 +1,7 @@
 from inspect import isawaitable
 
 from graphql import GraphQLResolveInfo
+from strawberry.utils.await_maybe import AwaitableOrValue
 from strawberry_django_jwt.exceptions import JSONWebTokenError
 from strawberry_django_jwt.middleware import (
     AsyncJSONWebTokenMiddleware,
@@ -21,12 +22,16 @@ class GqlAuthJSONWebTokenMiddleware(JSONWebTokenMiddleware):
 
     def resolve(self, _next, root, info: GraphQLResolveInfo, *args, **kwargs):
         try:
-            return super().resolve(_next, root, info, *args, **kwargs)
+            res = super().resolve(_next, root, info, *args, **kwargs)
+            return res
         except JSONWebTokenError:
             return _next(root, info, **kwargs)
 
 
 class GqlAuthAsyncJSONWebTokenMiddleware(AsyncJSONWebTokenMiddleware):
+    def on_request_start(self) -> AwaitableOrValue[None]:
+        print(2)
+
     async def resolve(self, _next, root, info: GraphQLResolveInfo, *args, **kwargs):
         try:
             return await super().resolve(_next, root, info, *args, **kwargs)

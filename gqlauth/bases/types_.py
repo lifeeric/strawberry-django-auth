@@ -26,7 +26,7 @@ class RefreshTokenPayload(OutputInterface):
 
 
 @strawberry.type
-class MutationNormalOutput:
+class AuthOutput:
     success: bool
     errors: Optional[ExpectedErrorType] = None
 

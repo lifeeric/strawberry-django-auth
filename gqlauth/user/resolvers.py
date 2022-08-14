@@ -19,7 +19,7 @@ from strawberry_django_jwt.mutations import Verify as VerifyParent
 from strawberry_django_jwt.utils import create_user_token
 
 from gqlauth.bases.types_ import (
-    MutationNormalOutput,
+    AuthOutput,
     ObtainJSONWebTokenPayload,
     RefreshTokenPayload,
     RevokeTokenPayload,
@@ -129,11 +129,11 @@ class RegisterMixin:
     )
 
     @classmethod
-    def resolve_mutation(cls, info, input_: RegisterInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, info, input_: RegisterInput) -> AuthOutput:
         if app_settings.LOGIN_REQUIRE_CAPTCHA:
             check_res = check_captcha(input_)
             if check_res != Messages.CAPTCHA_VALID:
-                return MutationNormalOutput(success=False, errors={"captcha": check_res})
+                return AuthOutput(success=False, errors={"captcha": check_res})
 
         try:
             with transaction.atomic():
@@ -155,11 +155,11 @@ class RegisterMixin:
                             user.status.send_password_set_email(info)
 
                     user_registered.send(sender=cls, user=user)
-                    return MutationNormalOutput(success=True)
+                    return AuthOutput(success=True)
                 else:
-                    return MutationNormalOutput(success=False, errors=f.errors.get_json_data())
+                    return AuthOutput(success=False, errors=f.errors.get_json_data())
         except EmailAlreadyInUse:
-            return MutationNormalOutput(
+            return AuthOutput(
                 success=False,
                 # if the email was set as a secondary email,
                 # the RegisterForm will not catch it,
@@ -167,7 +167,7 @@ class RegisterMixin:
                 errors={UserModel.EMAIL_FIELD: Messages.EMAIL_IN_USE},
             )
         except SMTPException:
-            return MutationNormalOutput(success=False, errors=Messages.EMAIL_FAIL)
+            return AuthOutput(success=False, errors=Messages.EMAIL_FAIL)
 
 
 class VerifyAccountMixin:
@@ -184,16 +184,16 @@ class VerifyAccountMixin:
         token: str
 
     @classmethod
-    def resolve_mutation(cls, info: Info, input_: VerifyAccountInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, info: Info, input_: VerifyAccountInput) -> AuthOutput:
         try:
             UserStatus.verify(input_.token)
-            return MutationNormalOutput(success=True)
+            return AuthOutput(success=True)
         except UserAlreadyVerified:
-            return MutationNormalOutput(success=False, errors=Messages.ALREADY_VERIFIED)
+            return AuthOutput(success=False, errors=Messages.ALREADY_VERIFIED)
         except SignatureExpired:
-            return MutationNormalOutput(success=False, errors=Messages.EXPIRED_TOKEN)
+            return AuthOutput(success=False, errors=Messages.EXPIRED_TOKEN)
         except (BadSignature, TokenScopeError):
-            return MutationNormalOutput(success=False, errors=Messages.INVALID_TOKEN)
+            return AuthOutput(success=False, errors=Messages.INVALID_TOKEN)
 
 
 class VerifySecondaryEmailMixin:
@@ -217,20 +217,20 @@ class VerifySecondaryEmailMixin:
         token: str
 
     @classmethod
-    def resolve_mutation(cls, _, input_: VerifySecondaryEmailInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, _, input_: VerifySecondaryEmailInput) -> AuthOutput:
         try:
             token = input_.token
             UserStatus.verify_secondary_email(token)
-            return MutationNormalOutput(success=True)
+            return AuthOutput(success=True)
         except EmailAlreadyInUse:
             # while the token was sent and the user haven't
             # verified, the email was free. If other account
             # was created with it, it is already in use.
-            return MutationNormalOutput(success=False, errors=Messages.EMAIL_IN_USE)
+            return AuthOutput(success=False, errors=Messages.EMAIL_IN_USE)
         except SignatureExpired:
-            return MutationNormalOutput(success=False, errors=Messages.EXPIRED_TOKEN)
+            return AuthOutput(success=False, errors=Messages.EXPIRED_TOKEN)
         except (BadSignature, TokenScopeError):
-            return MutationNormalOutput(success=False, errors=Messages.INVALID_TOKEN)
+            return AuthOutput(success=False, errors=Messages.INVALID_TOKEN)
 
 
 class ResendActivationEmailMixin:
@@ -250,21 +250,21 @@ class ResendActivationEmailMixin:
         email: str
 
     @classmethod
-    def resolve_mutation(cls, info, input_: ResendActivationEmailInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, info, input_: ResendActivationEmailInput) -> AuthOutput:
         try:
             email = input_.email
             f = EmailForm({"email": email})
             if f.is_valid():
                 user = get_user_by_email(email)
                 user.status.resend_activation_email(info)
-                return MutationNormalOutput(success=True)
-            return MutationNormalOutput(success=False, errors=f.errors.get_json_data())
+                return AuthOutput(success=True)
+            return AuthOutput(success=False, errors=f.errors.get_json_data())
         except ObjectDoesNotExist:
-            return MutationNormalOutput(success=True)  # even if user is not registered
+            return AuthOutput(success=True)  # even if user is not registered
         except SMTPException:
-            return MutationNormalOutput(success=False, errors=Messages.EMAIL_FAIL)
+            return AuthOutput(success=False, errors=Messages.EMAIL_FAIL)
         except UserAlreadyVerified:
-            return MutationNormalOutput(success=False, errors={"email": Messages.ALREADY_VERIFIED})
+            return AuthOutput(success=False, errors={"email": Messages.ALREADY_VERIFIED})
 
 
 class SendPasswordResetEmailMixin:
@@ -285,29 +285,29 @@ class SendPasswordResetEmailMixin:
         email: str
 
     @classmethod
-    def resolve_mutation(cls, info, input_: SendPasswordResetEmailInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, info, input_: SendPasswordResetEmailInput) -> AuthOutput:
         try:
             email = input_.email
             f = EmailForm({"email": email})
             if f.is_valid():
                 user = get_user_by_email(email)
                 user.status.send_password_reset_email(info, [email])
-                return MutationNormalOutput(success=True)
-            return MutationNormalOutput(success=False, errors=f.errors.get_json_data())
+                return AuthOutput(success=True)
+            return AuthOutput(success=False, errors=f.errors.get_json_data())
         except ObjectDoesNotExist:
-            return MutationNormalOutput(success=True)  # even if user is not registered
+            return AuthOutput(success=True)  # even if user is not registered
         except SMTPException:
-            return MutationNormalOutput(success=False, errors=Messages.EMAIL_FAIL)
+            return AuthOutput(success=False, errors=Messages.EMAIL_FAIL)
         except UserNotVerified:
             user = get_user_by_email(input_.email)
             try:
                 user.status.resend_activation_email(info)
-                return MutationNormalOutput(
+                return AuthOutput(
                     success=False,
                     errors={"email": Messages.NOT_VERIFIED_PASSWORD_RESET},
                 )
             except SMTPException:
-                return MutationNormalOutput(success=False, errors=Messages.EMAIL_FAIL)
+                return AuthOutput(success=False, errors=Messages.EMAIL_FAIL)
 
 
 class PasswordResetMixin:
@@ -332,7 +332,7 @@ class PasswordResetMixin:
     form = SetPasswordForm
 
     @classmethod
-    def resolve_mutation(cls, _, input_: PasswordResetInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, _, input_: PasswordResetInput) -> AuthOutput:
         try:
             payload = get_payload_from_token(
                 input_.token,
@@ -350,12 +350,12 @@ class PasswordResetMixin:
                     user.status.save(update_fields=["verified"])
                     user_verified.send(sender=cls, user=user)
 
-                return MutationNormalOutput(success=True)
-            return MutationNormalOutput(success=False, errors=f.errors.get_json_data())
+                return AuthOutput(success=True)
+            return AuthOutput(success=False, errors=f.errors.get_json_data())
         except SignatureExpired:
-            return MutationNormalOutput(success=False, errors=Messages.EXPIRED_TOKEN)
+            return AuthOutput(success=False, errors=Messages.EXPIRED_TOKEN)
         except (BadSignature, TokenScopeError):
-            return MutationNormalOutput(success=False, errors=Messages.INVALID_TOKEN)
+            return AuthOutput(success=False, errors=Messages.INVALID_TOKEN)
 
 
 class PasswordSetMixin:
@@ -380,7 +380,7 @@ class PasswordSetMixin:
     form = SetPasswordForm
 
     @classmethod
-    def resolve_mutation(cls, _, input_: PasswordSetInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, _, input_: PasswordSetInput) -> AuthOutput:
         try:
             token = input_.token
             payload = get_payload_from_token(
@@ -401,14 +401,14 @@ class PasswordSetMixin:
                     user.status.verified = True
                     user.status.save(update_fields=["verified"])
 
-                return MutationNormalOutput(success=True)
-            return MutationNormalOutput(success=False, errors=f.errors.get_json_data())
+                return AuthOutput(success=True)
+            return AuthOutput(success=False, errors=f.errors.get_json_data())
         except SignatureExpired:
-            return MutationNormalOutput(success=False, errors=Messages.EXPIRED_TOKEN)
+            return AuthOutput(success=False, errors=Messages.EXPIRED_TOKEN)
         except (BadSignature, TokenScopeError):
-            return MutationNormalOutput(success=False, errors=Messages.INVALID_TOKEN)
+            return AuthOutput(success=False, errors=Messages.INVALID_TOKEN)
         except PasswordAlreadySetError:
-            return MutationNormalOutput(success=False, errors=Messages.PASSWORD_ALREADY_SET)
+            return AuthOutput(success=False, errors=Messages.PASSWORD_ALREADY_SET)
 
 
 class ObtainJSONWebTokenMixin:
@@ -471,10 +471,10 @@ class ArchiveOrDeleteMixin:
     @classmethod
     @verification_required
     @_password_confirmation_required
-    def resolve_mutation(cls, info, input_: ArchiveOrDeleteMixinInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, info, input_: ArchiveOrDeleteMixinInput) -> AuthOutput:
         user = g_user(info)
         cls.resolve_action(user)
-        return MutationNormalOutput(success=True)
+        return AuthOutput(success=True)
 
 
 class ArchiveAccountMixin(ArchiveOrDeleteMixin):
@@ -553,7 +553,7 @@ class UpdateAccountMixin:
 
     @classmethod
     @verification_required
-    def resolve_mutation(cls, info, input_: UpdateAccountInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, info, input_: UpdateAccountInput) -> AuthOutput:
         user = g_user(info)
         f = cls.form(
             asdict(input_),
@@ -561,9 +561,9 @@ class UpdateAccountMixin:
         )
         if f.is_valid():
             f.save()
-            return MutationNormalOutput(success=True)
+            return AuthOutput(success=True)
         else:
-            return MutationNormalOutput(success=False, errors=f.errors.get_json_data())
+            return AuthOutput(success=False, errors=f.errors.get_json_data())
 
 
 class VerifyTokenMixin:
@@ -646,24 +646,22 @@ class SendSecondaryEmailActivationMixin:
     @classmethod
     @verification_required
     @_password_confirmation_required
-    def resolve_mutation(
-        cls, info, input_: SendSecondaryEmailActivationInput
-    ) -> MutationNormalOutput:
+    def resolve_mutation(cls, info, input_: SendSecondaryEmailActivationInput) -> AuthOutput:
         try:
             email = input_.get("email")
             f = EmailForm({"email": email})
             if f.is_valid():
                 user = g_user(info)
                 user.status.send_secondary_email_activation(info, email)
-                return MutationNormalOutput(success=True)
-            return MutationNormalOutput(success=False, errors=f.errors.get_json_data())
+                return AuthOutput(success=True)
+            return AuthOutput(success=False, errors=f.errors.get_json_data())
         except EmailAlreadyInUse:
             # while the token was sent and the user haven't verified,
             # the email was free. If other account was created with if
             # it is already in use
-            return MutationNormalOutput(success=False, errors={"email": Messages.EMAIL_IN_USE})
+            return AuthOutput(success=False, errors={"email": Messages.EMAIL_IN_USE})
         except SMTPException:
-            return MutationNormalOutput(success=False, errors=Messages.EMAIL_FAIL)
+            return AuthOutput(success=False, errors=Messages.EMAIL_FAIL)
 
 
 class SwapEmailsMixin:
@@ -679,11 +677,11 @@ class SwapEmailsMixin:
 
     @classmethod
     @secondary_email_required
-    def resolve_mutation(cls, info: Info, input_: SwapEmailsInput) -> MutationNormalOutput:
+    def resolve_mutation(cls, info: Info, input_: SwapEmailsInput) -> AuthOutput:
         if not g_user(info).check_password(input_.password):
-            return MutationNormalOutput(success=False, errors=Messages.INVALID_PASSWORD)
+            return AuthOutput(success=False, errors=Messages.INVALID_PASSWORD)
         g_user(info).status.swap_emails()
-        return MutationNormalOutput(success=True)
+        return AuthOutput(success=True)
 
 
 class RemoveSecondaryEmailMixin:
@@ -700,8 +698,6 @@ class RemoveSecondaryEmailMixin:
     @classmethod
     @secondary_email_required
     @_password_confirmation_required
-    def resolve_mutation(
-        cls, info: Info, input_: RemoveSecondaryEmailInput
-    ) -> MutationNormalOutput:
+    def resolve_mutation(cls, info: Info, input_: RemoveSecondaryEmailInput) -> AuthOutput:
         g_user(info).status.remove_secondary_email()
-        return MutationNormalOutput(success=True)
+        return AuthOutput(success=True)

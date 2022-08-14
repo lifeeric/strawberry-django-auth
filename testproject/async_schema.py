@@ -3,7 +3,8 @@ from strawberry.tools import merge_types
 
 from gqlauth.extensions import GqlAuthAsyncJSONWebTokenMiddleware
 from gqlauth.user import arg_mutations, relay
-from gqlauth.user.queries import UserQueries
+
+from .schema import Query
 
 
 @strawberry.type
@@ -49,8 +50,6 @@ class AuthRelayMutation:
     remove_secondary_email = relay.RemoveSecondaryEmail.afield
     send_secondary_email_activation = relay.SendSecondaryEmailActivation.afield
 
-
-Query = merge_types("RootQuery", (UserQueries,))
 
 Mutation = merge_types("RootMutation", (AuthMutation,))
 

@@ -5,6 +5,7 @@ from gqlauth.extensions import GqlAuthJSONWebTokenMiddleware
 from gqlauth.user import arg_mutations, relay
 from gqlauth.user.arg_mutations import Captcha
 from gqlauth.user.queries import UserQueries
+from testproject.external_usage import ExternalQueries
 
 
 @strawberry.type
@@ -52,7 +53,7 @@ class AuthRelayMutation:
     send_secondary_email_activation = relay.SendSecondaryEmailActivation.field
 
 
-Query = merge_types("RootQuery", (UserQueries,))
+Query = merge_types("RootQuery", (UserQueries, ExternalQueries))
 
 Mutation = merge_types("RootMutation", (AuthMutation,))
 
